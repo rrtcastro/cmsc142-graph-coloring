@@ -92,7 +92,7 @@ void create_graph(int ***graph, list *courses, int numcourses, char *filename){
 			for(i=0;i<numOfPrevCourses;i++){
 			
 				for(k=0;k<numcourses;k++){
-					if(strcmp(prevCourses[i],courses[i].courseno)==0){
+					if(strcmp(prevCourses[i],courses[k].courseno)==0){
 						from = k;
 						break;
 					}
@@ -104,9 +104,9 @@ void create_graph(int ***graph, list *courses, int numcourses, char *filename){
 						continue;
 				
 					for(k=0;k<numcourses;k++){
-						if(strcmp(prevCourses[i],courses[i].courseno)==0){
-							(*graph)[from][k]++;
-							(*graph)[k][from]++;
+						if(strcmp(prevCourses[j],courses[k].courseno)==0){
+							(*graph)[from][k] = (*graph)[from][k]+1;
+							(*graph)[k][from] = (*graph)[k][from]+1;
 						}
 					}
 				}
@@ -124,7 +124,6 @@ void create_graph(int ***graph, list *courses, int numcourses, char *filename){
 		//SEARCH ALGO ---- PAKIOPTIMIZE, GUMAGAMIT NG LINEAR SEARCH EH
 		for(i=0;i<numcourses;i++){
 			if(strcmp(tokens,courses[i].courseno)==0){
-				printf("%s %s\n",courses[i].courseno,tokens);
 				courses[i].weight++;
 				break;
 			}
@@ -134,17 +133,6 @@ void create_graph(int ***graph, list *courses, int numcourses, char *filename){
 		tokens = strtok(NULL,",");
 		
 	}
-	
-	for(i=0;i<numcourses;i++){
-		for(j=0;j<numcourses;j++){
-			printf("%2d",(*graph)[i][j]);
-		}
-		printf("\n");
-	}
-	
-	for(j=0;j<numcourses;j++){
-			printf("%2d\n",courses[i].weight);
-		}
 	
 }
 
