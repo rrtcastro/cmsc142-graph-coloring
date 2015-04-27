@@ -1,0 +1,281 @@
+/* 
+	Mini Project - Exam Scheduler
+	Form a group with three members (all from the same laboratory section) and accomplish the following:
+		1. Complete the program below by creating the create_graph function.
+		2. Improve the graph coloring algorithm to reduce the value of the objective function.
+		3. Discuss your algorithm, the running time of your algorithm, and the results.
+
+	Submission Details
+	Email To: mybderobles@gmail.com
+	      Subject: CMSC 142 Exam Scheduler
+		  Attach: Exam Scheduler Program named as <surname1>_<surname2>_<surname3>.c
+				  .docx/.odt file discussing your algorithm and the resulting objective function
+	DEADLINE: April 29 (Wednesday), 5 pm.
+
+	NOTE: The input provided is an actual registration data. The file should therefore not be distributed or used for other purposes.
+*/
+
+#include<stdio.h>
+#include<math.h>
+#include<stdlib.h>
+#include<string.h>
+#define N 18 //number of time periods
+
+typedef struct s_list{
+	char courseno[20];	//course number
+	int weight;			//number of students enrolled in the course
+						//can be used if classroom assignment will be included
+	int color;			//time slot (0 to N-1)
+}list;
+
+/* Get the list of courses to consider from a file. */
+int get_courses(list **courses, char *filename){
+	FILE *fp;
+	int tos=-1, i, j;
+	char buff[200];
+	int numcourses;
+
+	if((fp = fopen(filename, "r")) == NULL){
+		printf("Error reading %s.\n", filename);
+		exit(-1);
+	}
+
+	//read number of courses
+	fscanf(fp, "%d\n", &numcourses);
+	(*courses) = (list *)malloc(sizeof(list)*numcourses);
+
+	//get courses
+	while(fgets(buff, 200, fp) != NULL){
+		//buff[strlen(strtok(buff, "\n"))] = 0;	//remove newline character (for windows compiler)
+		buff[strlen(buff)-2] = 0;				//remove newline character (for linux users)
+		strcpy((*courses)[++tos].courseno, buff);
+		(*courses)[tos].weight = 0;
+	}
+	fclose(fp);
+
+	return numcourses;
+}
+
+void initialize_graph(int ***graph, int numcourses){
+	int i,j;
+
+	(*graph) = (int **)malloc(sizeof(int *)*numcourses);
+	for(i=0; i<numcourses; i++){
+		(*graph)[i] = (int *)malloc(sizeof(int)*numcourses);
+		for(j=0; j<numcourses; j++){
+			(*graph)[i][j] = 0;
+		}
+	}
+}
+
+/* Create the adjacency matrix from the registration data. */
+/* Update the weight of the courses. */
+void create_graph(int ***graph, list *courses, int numcourses, char *filename){ 
+	FILE *fp;
+	char line[100], stdnum[10] = "0000-00000", prevCourses[15][15];
+	int i, j, k, numOfPrevCourses = 0;
+	int from, to;
+	
+	initialize_graph(graph,numcourses);
+	
+	if((fp = fopen(filename, "r")) == NULL){
+		printf("Error reading %s.\n", filename);
+		exit(-1);
+	}
+	
+	while (fgets (line, sizeof(line), fp)) {
+		char *tokens = strtok(line,",");
+		
+		if(strcmp(stdnum,tokens)!=0){
+			strcpy(stdnum, tokens);
+			
+			for(i=0;i<numOfPrevCourses;i++){
+			
+				for(k=0;k<numcourses;k++){
+					if(strcmp(prevCourses[i],courses[i].courseno)==0){
+						from = k;
+						break;
+					}
+				}
+			
+				for(j=0;j<numOfPrevCourses;j++){
+				
+					if(i==j)
+						continue;
+				
+					for(k=0;k<numcourses;k++){
+						if(strcmp(prevCourses[i],courses[i].courseno)==0){
+							(*graph)[from][k]++;
+							(*graph)[k][from]++;
+						}
+					}
+				}
+			}
+			
+			numOfPrevCourses = 0;
+		}
+		
+		tokens = strtok(NULL,",");
+		strcpy(prevCourses[numOfPrevCourses],tokens);
+		numOfPrevCourses++;
+		
+		
+		
+		//SEARCH ALGO ---- PAKIOPTIMIZE, GUMAGAMIT NG LINEAR SEARCH EH
+		for(i=0;i<numcourses;i++){
+			if(strcmp(tokens,courses[i].courseno)==0){
+				printf("%s %s\n",courses[i].courseno,tokens);
+				courses[i].weight++;
+				break;
+			}
+		}
+		
+		
+		tokens = strtok(NULL,",");
+		
+	}
+	
+	for(i=0;i<numcourses;i++){
+		for(j=0;j<numcourses;j++){
+			printf("%2d",(*graph)[i][j]);
+		}
+		printf("\n");
+	}
+	
+	for(j=0;j<numcourses;j++){
+			printf("%2d\n",courses[i].weight);
+		}
+	
+}
+
+int search_course(list *courses, int n, char cnum[]){
+	int i, mid, low, high;
+	int ans1, ans2;
+	
+	low = 0;
+	high = n-1;
+  
+	while(high >= low){
+		mid = (low+high)/2;
+
+		if(strcmp(courses[mid].courseno, cnum) < 0) low = mid+1;
+		else if(strcmp(courses[mid].courseno, cnum) > 0) high = mid-1;
+		else return mid;
+	}   
+	return -1;
+}
+
+/* Graph Coloring Algorithm - improve this to reduce the value of the objective function. */
+void create_schedule(int **graph, list *courses, int numcourses){
+	int i, j, k, col;
+
+	for(i=0; i<numcourses; i++){
+		for(j=0; j<N; j++){
+			for(k=0; k<i; k++){
+				if(graph[i][k] > 0 && courses[k].color == j) break;
+			}
+			//color j was not yet chosen by adjacent nodes
+			if(k >= i){
+				courses[i].color = j;
+				break;
+			}
+		}
+		//if there is no color available, randomly assign one
+		if(j >= N){
+			col = rand()%N;
+			courses[i].color = col;
+		}
+	}
+}
+
+int objective_function(int **graph, list *courses, int numcourses){
+	int of, sse, sce, sme;
+	FILE *fp;
+
+	sse = compute_sse(graph, courses, numcourses);
+	sce = compute_sce(graph, courses, numcourses);
+	sme = compute_sme(graph, courses, numcourses);
+   
+	of = 5*sse+2*sce+sme;
+   
+	return of;
+}
+
+int compute_sse(int **graph, list *courses, int numcourses){
+	int i,j, sse=0;
+	for(i=0; i<numcourses; i++){
+		for(j=0; j<numcourses; j++){
+			if(graph[i][j] > 0 && courses[i].color == courses[j].color){
+				sse = sse+graph[i][j]; 
+			}
+		}
+	}
+	return sse;
+}
+
+int compute_sce(int **graph, list *courses, int numcourses){
+	int i,j, sce=0;
+	for(i=0; i<numcourses; i++){
+		for(j=0; j<numcourses; j++){
+			if(graph[i][j] > 0 && abs(courses[i].color-courses[j].color) == 1){
+				sce = sce+graph[i][j]; 
+			}
+		}
+	}
+	return sce;
+}
+
+int compute_sme(int **graph, list *courses, int numcourses){
+	int i,j, sme=0;
+	for(i=0; i<numcourses; i++){
+		for(j=0; j<numcourses; j++){
+			if(graph[i][j] > 0 && courses[i].color/3 == courses[j].color/3){ //3 slots/exams per day
+				sme = sme+graph[i][j]; 
+			}
+		}
+	}
+	return sme;
+}
+
+/* Prints the generated schedule. */
+void output_schedule(list *courses, int numcourses){
+	int i, j;
+      
+	for(i=0; i<N; i++){
+		printf("#\n");
+
+		//print all courses with color i
+		for(j=0; j<numcourses; j++){
+			if(courses[j].color == i){
+				printf("%s\n", courses[j].courseno);
+			}
+		}
+	}
+}
+
+main(int argc, char *argv[]){
+	list *courses;		//list of courses to consider
+	int numcourses;		//number of courses to consider
+	int **graph;		//adjacency matrix
+	int i, of;
+	
+	if(argc < 3){
+		printf("To run: ./executable_file input_courses input_registration_data > output_file\n");
+		exit(1);
+	}
+	
+	numcourses = get_courses(&courses, argv[1]);
+	create_graph(&graph, courses, numcourses, argv[2]);
+	create_schedule(graph, courses, numcourses);
+
+	of = objective_function(graph, courses, numcourses);
+	printf("Objective Function: %d\n", of);
+	output_schedule(courses, numcourses);
+
+	//free memory spaces
+	free(courses);
+	for(i=0; i<numcourses; i++){
+		free(graph[i]);
+	}
+	free(graph);
+}
